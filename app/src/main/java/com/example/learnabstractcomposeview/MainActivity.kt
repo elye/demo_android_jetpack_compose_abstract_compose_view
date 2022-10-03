@@ -9,7 +9,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import com.example.learnabstractcomposeview.ui.theme.LearnAbstractComposeViewTheme
@@ -32,11 +31,10 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colors.background
                 ) {
                     val textValue = rememberSaveable { mutableStateOf(originTitle) }
-                    val context = LocalContext.current
                     val view = LocalView.current
                     val parentComposition = rememberCompositionContext()
                     val myComposeView = remember {
-                        MyComposeView(context, view).apply {
+                        MyComposeView(view).apply {
                             setCustomContent(parentComposition) {
                                 MyComposeViewContent(textValue.value, ::dismiss)
                             }

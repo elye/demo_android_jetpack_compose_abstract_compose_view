@@ -16,11 +16,10 @@ import java.util.*
 
 @SuppressLint("ViewConstructor")
 class MyComposeView(
-    context: Context,
     composeView: View,
     saveID: UUID? = null,
 
-    ) : AbstractComposeView(context) {
+    ) : AbstractComposeView(composeView.context) {
 
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private var params: WindowManager.LayoutParams =

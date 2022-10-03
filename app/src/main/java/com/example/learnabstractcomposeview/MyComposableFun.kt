@@ -3,19 +3,17 @@ package com.example.learnabstractcomposeview
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextAlign
 import java.util.*
 
 @Composable
 fun MyComposableFun(textValue: MutableState<String>) {
-    val context = LocalContext.current
     val view = LocalView.current
     val id = rememberSaveable { UUID.randomUUID() }
     val parentComposition = rememberCompositionContext()
     val myComposeView = remember {
-        MyComposeView(context, view, id).apply {
+        MyComposeView(view, id).apply {
             setCustomContent(parentComposition) {
                 MyComposeViewContent(textValue.value, ::dismiss)
             }
