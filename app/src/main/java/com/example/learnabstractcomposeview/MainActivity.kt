@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.PixelFormat
 import android.os.Bundle
+import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -20,6 +21,7 @@ import androidx.compose.ui.R
 import androidx.compose.ui.platform.AbstractComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewTreeLifecycleOwner
@@ -29,25 +31,55 @@ import com.example.learnabstractcomposeview.ui.theme.LearnAbstractComposeViewThe
 import java.util.*
 
 class MainActivity : ComponentActivity() {
+
+    companion object {
+        private const val originTitle = "Custom Compose Title"
+        private const val changedTitle = "Changed Compose Title"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             LearnAbstractComposeViewTheme {
-                // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
                         .wrapContentHeight(),
                     color = MaterialTheme.colors.background
                 ) {
+                    val textValue = rememberSaveable { mutableStateOf(originTitle) }
                     val context = LocalContext.current
                     val view = LocalView.current
-                    val myComposeView = remember { MyComposeView(context, view) }
-                    Button(onClick = { myComposeView.show() }) {
-                        Text(text = "Show MyComposeView")
+                    val parentComposition = rememberCompositionContext()
+                    val myComposeView = remember {
+                        MyComposeView(context, view).apply {
+                            setCustomContent(parentComposition) {
+                                MyCustomComposeView(textValue.value, ::dismiss)
+                            }
+                        }
                     }
 
-                    MyComposeViewComposable()
+                    var checkedState by rememberSaveable { mutableStateOf(false) }
+                    Column(
+                        modifier = Modifier.padding(8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Row (verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = checkedState,
+                                onCheckedChange = {
+                                    textValue.value = if (it)  changedTitle else originTitle
+                                    checkedState = it
+                                }
+                            )
+                        }
+                        Text("Title: ${textValue.value}")
+                        Button(onClick = { myComposeView.show() }) {
+                            Text(text = "Open")
+                        }
+
+                        MyComposeViewComposable(textValue)
+                    }
 
                     DisposableEffect(myComposeView) {
                         onDispose {
@@ -60,11 +92,23 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun MyComposeViewComposable() {
+    private fun MyComposeViewComposable(textValue: MutableState<String>) {
         val context = LocalContext.current
         val view = LocalView.current
         val id = rememberSaveable { UUID.randomUUID() }
-        val myComposeView = remember { MyComposeView(context, view, id) }
+        val parentComposition = rememberCompositionContext()
+        val myComposeView = remember {
+            MyComposeView(context, view, id).apply {
+                setCustomContent(parentComposition) {
+                    MyCustomComposeView(textValue.value, ::dismiss)
+                }
+            }
+        }
+
+        Text(
+            text = "\"${textValue.value}\" in Container",
+            textAlign = TextAlign.Center
+        )
 
         DisposableEffect(key1 = myComposeView) {
             myComposeView.show()
@@ -81,7 +125,7 @@ class MyComposeView(
     composeView: View,
     saveID: UUID? = null,
 
-) : AbstractComposeView(context) {
+    ) : AbstractComposeView(context) {
 
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private var params = createLayoutParams()
@@ -97,37 +141,21 @@ class MyComposeView(
         }
     }
 
+    private var content: @Composable () -> Unit by mutableStateOf({})
+    override var shouldCreateCompositionOnAttachedToWindow: Boolean = false
+        private set
+
     @Composable
     override fun Content() {
-        Box(contentAlignment = Alignment.TopCenter, modifier = Modifier.padding(16.dp)) {
-            Surface(
-                border = BorderStroke(1.dp, MaterialTheme.colors.secondary),
-                shape = RoundedCornerShape(8.dp),
-                elevation = 8.dp
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    var checkedState by rememberSaveable { mutableStateOf(false) }
-                    Column(
-                        modifier = Modifier.padding(8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Checkbox(
-                            checked = checkedState,
-                            onCheckedChange = { checkedState = it }
-                        )
-                    }
+        content()
+    }
 
-                    Text("MyComposeView Title")
-
-                    TextButton(
-                        onClick = { dismiss() },
-                        modifier = Modifier.padding(end = 8.dp)
-                    ) {
-                        Text("Remove")
-                    }
-                }
-            }
+    fun setCustomContent(parent: CompositionContext? = null, content: @Composable () -> Unit) {
+        parent?.let {
+            setParentCompositionContext(it)
         }
+        this.content = content
+        shouldCreateCompositionOnAttachedToWindow = true
     }
 
     fun show() {
@@ -154,6 +182,7 @@ class MyComposeView(
 
     private fun createLayoutParams(): WindowManager.LayoutParams =
         WindowManager.LayoutParams().apply {
+            gravity = Gravity.CENTER
 //            gravity = when (position) {
 //                ConstructKitToastPlacement.TOP -> Gravity.TOP
 //                ConstructKitToastPlacement.BOTTOM -> Gravity.BOTTOM
@@ -167,6 +196,40 @@ class MyComposeView(
 //            flags = WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
 //                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
         }
+}
+
+
+@Composable
+fun MyCustomComposeView(textValue: String, buttonClicked: (() -> Unit)? = null) {
+    Box(contentAlignment = Alignment.TopCenter, modifier = Modifier.padding(16.dp)) {
+        Surface(
+            border = BorderStroke(1.dp, MaterialTheme.colors.secondary),
+            shape = RoundedCornerShape(8.dp),
+            elevation = 8.dp
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                var checkedState by rememberSaveable { mutableStateOf(false) }
+                Column(
+                    modifier = Modifier.padding(8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Checkbox(
+                        checked = checkedState,
+                        onCheckedChange = { checkedState = it }
+                    )
+                }
+
+                Text(textValue)
+
+                TextButton(
+                    onClick = { buttonClicked?.invoke() },
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
+                    Text("Remove")
+                }
+            }
+        }
+    }
 }
 
 @Composable
