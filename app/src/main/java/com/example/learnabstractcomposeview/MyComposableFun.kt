@@ -15,6 +15,8 @@ fun MyComposableFun(textValue: String, content: @Composable (()->Unit) -> Unit) 
 
     val view = LocalView.current
     val id = rememberSaveable { UUID.randomUUID() }
+    var checkedState by rememberSaveable { mutableStateOf(false) }
+    var myText by rememberSaveable (textValue){ mutableStateOf(textValue) }
 
     val parentComposition = rememberCompositionContext()
     val myComposeView = remember {
@@ -25,10 +27,16 @@ fun MyComposableFun(textValue: String, content: @Composable (()->Unit) -> Unit) 
         }
     }
 
-    Text(
-        text = "\"${textValue}\" in Container",
-        textAlign = TextAlign.Center
-    )
+    Row (verticalAlignment = Alignment.CenterVertically) {
+        Checkbox(
+            checked = checkedState,
+            onCheckedChange = {
+                myText = if (it) "Internal Change" else "Internal Change Again"
+                checkedState = it
+            }
+        )
+        Text("Title: $myText")
+    }
 
     DisposableEffect(key1 = myComposeView) {
         myComposeView.show()
