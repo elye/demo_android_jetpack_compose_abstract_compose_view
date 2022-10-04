@@ -30,13 +30,13 @@ class MainActivity : ComponentActivity() {
                         .wrapContentHeight(),
                     color = MaterialTheme.colors.background
                 ) {
-                    val textValue = rememberSaveable { mutableStateOf(originTitle) }
+                    var textValue by rememberSaveable { mutableStateOf(originTitle) }
                     val view = LocalView.current
                     val parentComposition = rememberCompositionContext()
                     val myComposeView = remember {
                         MyComposeView(view).apply {
                             setCustomContent(parentComposition) {
-                                MyComposeViewContent(textValue.value, ::dismiss)
+                                MyComposeViewContent(textValue, ::dismiss)
                             }
                         }
                     }
@@ -50,17 +50,22 @@ class MainActivity : ComponentActivity() {
                             Checkbox(
                                 checked = checkedState,
                                 onCheckedChange = {
-                                    textValue.value = if (it)  changedTitle else originTitle
+                                    textValue = if (it)  changedTitle else originTitle
                                     checkedState = it
                                 }
                             )
                         }
-                        Text("Title: ${textValue.value}")
+                        Text("Title: $textValue")
                         Button(onClick = { myComposeView.show() }) {
                             Text(text = "Open")
                         }
 
-                        MyComposableFun(textValue)
+                        MyComposableFun(textValue) { action ->
+                            MyComposeViewContent(
+                                textValue,
+                                action
+                            )
+                        }
                     }
 
                     DisposableEffect(myComposeView) {
